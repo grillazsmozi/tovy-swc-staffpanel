@@ -9,16 +9,27 @@ import * as bcrypt from 'bcrypt'
 const prisma = new PrismaClient()
 import { setRegistry } from '@/utils/registryManager'
 
-function getUserID(name: any)
-{
-    fetch(`https://www.roblox.com/users/profile?username=${name}`)
-        .then(r => {
-            if (!r.ok) { throw "Invalid response"; }
-            return r.url.match(/\d+/)[0];
-        })
-        .then(id => {
-            console.log(id);
-        })
+function getUserID(name: string): Promise<string> {
+    return new Promise((res, rej) => {
+        fetch(`https://www.roblox.com/users/profile?username=${name}`)
+            .then(r => {
+                // check to see if URL is invalid.
+                if (!r.ok) { throw "Invalid response"; }
+                // return the only digits in the URL "the User ID"
+                const match = r.url.match(/\d+/);
+                if (match) {
+                    return match[0];
+                } else {
+                    throw "No user ID found in URL";
+                }
+            })
+            .then(id =>{
+                // this is where you get your ID
+                console.log(id);
+                res(id);
+            })
+            .catch(error => rej(error));
+    });
 }
 
 type Data = {
