@@ -19,7 +19,7 @@ export const getServerSideProps = withPermissionCheckSsr(async ({ query }) => {
 	const sessions = await prisma.session.findMany({
 		where: {
 			startedAt: {
-				lte: new Date()
+				not: null
 			},
 			ended: null,
 			sessionType: {
@@ -31,6 +31,7 @@ export const getServerSideProps = withPermissionCheckSsr(async ({ query }) => {
 			sessionType: true
 		}
 	});
+	console.log(sessions)
 	return {
 		props: {
 			sessions: (JSON.parse(JSON.stringify(sessions, (key, value) => (typeof value === 'bigint' ? value.toString() : value))) as typeof sessions)
@@ -67,7 +68,9 @@ const Home: pageWithLayout<pageProps> = (props) => {
 				})) {
 					//get how many minutes the session has been going on
 					const minutes = (new Date().getTime() - new Date(session.date).getTime()) / 1000 / 60;
+					console.log(minutes)
 					const slot = JSON.parse(JSON.stringify(e));
+					console.log(slot.timeAfter)
 					if (slot.timeAfter < minutes) {
 						statues.set(session.id, slot.name);
 						return;
@@ -95,7 +98,7 @@ const Home: pageWithLayout<pageProps> = (props) => {
 						<div className="px-5 py-4 backdrop-blur flex">
 							<div><p className="text-xl font-bold"> {session.sessionType.name} </p>
 								<div className="flex mt-1">
-									<img src={String(session.owner.picture)} className="bg-primary rounded-full w-8 h-8 my-auto" />
+									<img src={`https://www.roblox.com/headshot-thumbnail/image?userId=${session.ownerId}&width=50&height=50&format=png`} className="bg-primary rounded-full w-8 h-8 my-auto" />
 									<p className="font-semibold pl-2 leading-5 my-auto"> {session.owner.username} <br /> {statues.get(session.id)}  </p>
 								</div>
 							</div>

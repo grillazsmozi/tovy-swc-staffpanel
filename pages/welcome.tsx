@@ -46,6 +46,7 @@ const Login: NextPage = ({ }) => {
 				Router.push("/")
 				Router.reload()
 			}, 1000)
+			console.log(request)
 		}
 	}
 

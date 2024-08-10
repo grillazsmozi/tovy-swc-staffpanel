@@ -28,6 +28,7 @@ export async function handler(
 	});
 	if (!findSession) return res.status(404).json({ success: false, error: 'Session not found' });
 
+	console.log(req.body.slots)
 
 	
 	const session = await prisma.sessionType.update({

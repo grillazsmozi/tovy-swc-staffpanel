@@ -80,9 +80,11 @@ const Home: pageWithLayout<InferGetServerSidePropsType<GetServerSideProps>> = ({
 			udate.setMinutes(date.getMinutes());
 			udate.setSeconds(0);
 			udate.setMilliseconds(0);
+			console.log(udate.getUTCDay())
 
 			return udate.getUTCDay();
 		})
+		console.log(days2)
 		const session = await axios.post(`/api/workspace/${workspace.groupId}/sessions/manage/new`, {
 			name: form.getValues().name,
 			gameId: selectedGame,
@@ -107,7 +109,7 @@ const Home: pageWithLayout<InferGetServerSidePropsType<GetServerSideProps>> = ({
 		});
 		if (!session) return;
 		form.clearErrors()
-		router.push(`/workspace/${workspace.groupId}/sessions/schedules`)
+		router.push(`/workspace/${workspace.groupId}/sessions/schedule`)
 	}
 
 	const toggleRole = async (role: string) => {
@@ -130,6 +132,7 @@ const Home: pageWithLayout<InferGetServerSidePropsType<GetServerSideProps>> = ({
 			newdays.push(day);
 		}
 		setDays(newdays);
+		console.log(days)
 	}
 
 	const newStatus = () => {
@@ -275,7 +278,7 @@ const Home: pageWithLayout<InferGetServerSidePropsType<GetServerSideProps>> = ({
 					<Switchcomponenet label="Allow unscheduled (coming soon)" classoverride="mb-2" checked={allowUnscheduled} onChange={() => setAllowUnscheduled(!allowUnscheduled)} />
 					<Switchcomponenet label="Scheduled" checked={enabled} onChange={() => setEnabled(!enabled)} />
 					{enabled && <div className="mt-5">
-						<p className="text-2xl font-bold mb-2">Repeating settings</p>
+						<p className="text-2xl font-bold mb-2">Repeting settings</p>
 						{/* a week calendar */}
 						<div className="grid grid-cols-3 gap-x-3 gap-y-2 mt-5">
 							{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
@@ -336,21 +339,21 @@ const Home: pageWithLayout<InferGetServerSidePropsType<GetServerSideProps>> = ({
 									value: false,
 									message: 'Webhook Ping is required',
 								}
-							})} label="Ping" type="text" placeholder={`Session Ping [<@&id>]`}/>
+							})} label="Title" type="text" placeholder={`Session ping`}/>
 
 							<Input {...form.register('webhookTitle', {
 								required: {
 									value: false,
 									message: 'Webhook is required',
 								}
-							})} label="Title" type="text" placeholder={`Embed Title / Session Name`}/>
+							})} label="Title" type="text" placeholder={`Session name`}/>
 
 							<Input {...form.register('webhookBody', {
 								required: {
 									value: false,
 									message: 'Webhook is required',
 								}
-							})} label="Text" type="text" textarea placeholder="Come and join us for a fun session!" />
+							})} label="Text" type="text" textarea placeholder="This grouyp is hosting a session and shit" />
 						</>
 					)}
 

@@ -4,7 +4,6 @@ import { loginState } from "@/state";
 import { Fragment, useEffect, useState } from "react";
 import { Dialog, Popover, Transition } from "@headlessui/react";
 import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
-import { getThumbnail } from "@/utils/userinfoEngine";
 import { useRecoilState } from "recoil";
 import noblox from "noblox.js";
 import Input from "@/components/input";
@@ -16,8 +15,6 @@ import {
 	flexRender,
 	getCoreRowModel,
 	getFilteredRowModel,
-	// @ts-ignore
-	onColumnVisibilityChange,
 	getSortedRowModel,
 	SortingState,
 	getPaginationRowModel,
@@ -25,7 +22,6 @@ import {
 } from '@tanstack/react-table'
 import { FormProvider, useForm } from "react-hook-form";
 import Button from "@/components/button";
-import SwitchComponenet from "@/components/switch";
 import { inactivityNotice, Session, user, userBook, wallPost } from "@prisma/client";
 import Checkbox from "@/components/checkbox";
 import toast, { Toaster } from 'react-hot-toast';
@@ -38,30 +34,20 @@ type User = {
 	info: {
 		userId: BigInt
 		username: string | null
-		picture: string | null
 	}
-	book: userBook[]
+	writtenBooks: userBook[]
 	wallPosts: wallPost[]
 	inactivityNotices: inactivityNotice[]
 	sessions: Session[]
 	rankID: number
 	minutes: number
-	idleMinutes: number
-	hostedSessions: any,
-	messages: number
 }
 
 export const getServerSideProps = withPermissionCheckSsr(async ({ params }: GetServerSidePropsContext) => {
 	const allUsers = await prisma.user.findMany({
-		where: {
-			roles: {
-				some: {
-					workspaceGroupId: parseInt(params?.id as string)
-				}
-			}
-		},
+		where: {},
 		include: {
-			book: true,
+			writtenBooks: true,
 			wallPosts: true,
 			inactivityNotices: true,
 			sessions: true,
@@ -71,25 +57,6 @@ export const getServerSideProps = withPermissionCheckSsr(async ({ params }: GetS
 	const allActivity = await prisma.activitySession.findMany({
 		where: {
 			workspaceGroupId: parseInt(params?.id as string)
-		},
-		include: {
-			user: {
-				include: {
-					writtenBooks: true,
-					wallPosts: true,
-					inactivityNotices: true,
-					sessions: true,
-					ranks: true
-				}
-		}
-	}
-	});
-
-	const allHostedSessions = await prisma.session.findMany({
-		where: {
-			ended: {
-				not: null
-			}
 		}
 	});
 
@@ -102,72 +69,19 @@ export const getServerSideProps = withPermissionCheckSsr(async ({ params }: GetS
 			ms.push(session.endTime?.getTime() as number - session.startTime.getTime());
 		});
 
-		const ims: number[] = [];
-		allActivity.filter((x: any) => BigInt(x.userId) == user.userid).forEach((s: any) => {
-			ims.push(Number(s.idleTime))
-		})
-
-		const sh: any[] = []
-		allHostedSessions.filter((x: any) => BigInt(x.ownerId) == user.userid).forEach((s) => {
-			sh.push(s)
-		})
-
-		const messages: number[] = []
-		allActivity.filter((x: any) => BigInt(x.userId) == user.userid).forEach((s: any) => {
-			messages.push(s.messages)
-		})
-
 		computedUsers.push({
 			info: {
-				userId: Number(user.userid),
-				picture: user.picture || '',
+				userId: user.userid,
 				username: user.username,
 			},
-			book: user.book,
+			writtenBooks: user.writtenBooks,
 			wallPosts: user.wallPosts,
 			inactivityNotices: user.inactivityNotices,
 			sessions: user.sessions,
 			rankID: user.ranks[0]?.rankId ? Number(user.ranks[0]?.rankId) : 0,
-			minutes: ms.length ? Math.round(ms.reduce((p, c) => p + c) / 60000) : 0,
-			idleMinutes: ims.length ? Math.round(ims.reduce((p, c) => p + c)) : 0,
-			hostedSessions: sh,
-			messages: messages.length ? Math.round(messages.reduce((p, c) => p + c)) : 0
+			minutes: ms.length ? Math.round(ms.reduce((p, c) => p + c) / 60000) : 0
 		})
 	}
-
-	//find users who have an activity session not on computedUsers
-	const usersNotInComputedUsers = allActivity.filter((x: any) => !computedUsers.find((y: any) => BigInt(y.info.userId) == BigInt(x.userId)))
-	//map them to the computedUsers array
-	usersNotInComputedUsers.forEach((x: any) => {
-		if (computedUsers.find((y: any) => BigInt(y.info.userId) == BigInt(x.userId))) return;
-		const ms: number[] = [];
-		allActivity.filter((y: any) => BigInt(y.userId) == BigInt(x.userId) && !y.active).forEach((session) => {
-			ms.push(session.endTime?.getTime() as number - session.startTime.getTime());
-		});
-
-		const messages: number[] = []
-		allActivity.filter((y: any) => BigInt(y.userId) == BigInt(x.userId)).forEach((s: any) => {
-			messages.push(s.messages)
-		})
-
-
-		computedUsers.push({
-			info: {
-				userId: Number(x.userId),
-				picture: x.user.picture || null,
-				username: x.user.username,
-			},
-			book: [],
-			wallPosts: [],
-			inactivityNotices: [],
-			sessions: [],
-			rankID: x.user.ranks[0]?.rankId ? Number(x.user.ranks[0]?.rankId) : 0,
-			minutes: ms.length ? Math.round(ms.reduce((p, c) => p + c) / 60000) : 0,
-			idleMinutes: 0,
-			hostedSessions: [],
-			messages: messages.length ? Math.round(messages.reduce((p, c) => p + c)) : 0
-		})
-	})
 
 	return {
 		props: {
@@ -190,41 +104,11 @@ const filters: {
 		'greaterThan',
 		'lessThan',
 	],
-	idle: [
-		'equal',
-		'greaterThan',
-		'lessThan'
-	],
 	rank: [
 		'equal',
 		'greaterThan',
 		'lessThan',
 	],
-	sessions: [
-		'equal',
-		'greaterThan',
-		'lessThan'
-	],
-	hosted: [
-		'equal',
-		'greaterThan',
-		'lessThan'
-	],
-	warnings : [
-		'equal',
-		'greaterThan',
-		'lessThan'
-	],
-	messages: [
-		'equal',
-		'greaterThan',
-		'lessThan'
-	],
-	notices: [
-		'equal',
-		'greaterThan',
-		'lessThan'
-	]
 }
 
 const filterNames: {
@@ -257,11 +141,8 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 	const [message, setMessage] = useState("");
 	const [type, setType] = useState("");
 	const [minutes, setMinutes] = useState(0);
-	const [users, setUsers] = useState(usersInGroup);
 
-	const updateUsers = async (query: string) => {
-		
-	}
+	const [users, setUsers] = useState(usersInGroup);
 
 	const columns = [
 		{
@@ -290,7 +171,7 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 			cell: (row) => {
 				return (
 					<div className="flex flex-row cursor-pointer" onClick={() => router.push(`/workspace/${router.query.id}/profile/${row.getValue().userId}`)}>
-						<img src={row.getValue().picture!} className="w-10 h-10 rounded-full bg-primary " alt="profile image" />
+						<img src={`https://www.roblox.com/headshot-thumbnail/image?userId=${row.getValue().userId}&width=512&height=512&format=jpg`} className="w-10 h-10 rounded-full bg-primary " alt="profile image" />
 						<p className="leading-5 my-auto px-2 font-semibold">
 							{row.getValue().username} <br />
 						</p>
@@ -306,15 +187,7 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 				);
 			}
 		}),
-		columnHelper.accessor("hostedSessions", {
-			header: 'Sessions hosted',
-			cell: (row) => {
-				return (
-					<p>{row.getValue().length}</p>
-				);
-			}
-		}),
-		columnHelper.accessor("book", {
+		columnHelper.accessor("writtenBooks", {
 			header: 'Warnings',
 			cell: (row) => {
 				return (
@@ -347,23 +220,7 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 			}
 		}),
 		columnHelper.accessor("minutes", {
-			header: 'Minutes',
-			cell: (row) => {
-				return (
-					<p>{row.getValue()}</p>
-				);
-			}
-		}),
-		columnHelper.accessor("idleMinutes", {
-			header: 'Idle minutes',
-			cell: (row) => {
-				return (
-					<p>{row.getValue()}</p>
-				);
-			}
-		}),
-		columnHelper.accessor("messages", {
-			header: 'Messages',
+			header: 'Minutes in-game',
 			cell: (row) => {
 				return (
 					<p>{row.getValue()}</p>
@@ -372,19 +229,13 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 		}),
 	];
 
-	const [columnVisibility, setColumnVisibility] = useState([])
-
 	const table = useReactTable({
 		columns,
 		data: users,
 		state: {
 			sorting,
-			rowSelection,
-			// @ts-ignore
-			columnVisibility,
+			rowSelection
 		},
-		// @ts-ignore
-		onColumnVisibilityChange: setColumnVisibility,
 		onRowSelectionChange: setRowSelection,
 		onSortingChange: setSorting,
 		getCoreRowModel: getCoreRowModel(),
@@ -400,15 +251,19 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 	}[]>([]);
 
 	const newfilter = () => {
+		console.log('new filter');
 		setColFilters([...colFilters, { id: uuidv4(), column: 'username', filter: 'equal', value: '' }])
 	};
 	const removeFilter = (id: string) => {
 		setColFilters(colFilters.filter((filter) => filter.id !== id));
 	}
 	const updateFilter = (id: string, column: string, filter: string, value: string) => {
+		console.log('e')
 		const OBJ = Object.assign(([] as typeof colFilters), colFilters);
 		const index = OBJ.findIndex((filter) => filter.id === id);
+		console.log({ index, id, column, filter, value })
 		OBJ[index] = { id, column, filter, value };
+		console.log(OBJ)
 		setColFilters(OBJ);
 	};
 
@@ -446,25 +301,12 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 							valid = false;
 						}
 					}
-				} else if (filter.column === 'idle') {
-					if (!filter.value) return;
-					if (filter.filter === 'equal') {
-						if (user.idleMinutes !== parseInt(filter.value)) {
-							valid = false;
-						}
-					} else if (filter.filter === 'greaterThan') {
-						if (user.idleMinutes <= parseInt(filter.value)) {
-							valid = false;
-						}
-					} else if (filter.filter === 'lessThan') {
-						if (user.idleMinutes >= parseInt(filter.value)) {
-							valid = false;
-						}
-					}
 				} else if (filter.column === 'rank') {
 					if (!filter.value) return;
 					if (filter.filter === 'equal') {
+						console.log(user.rankID, filter.value)
 						if (user.rankID !== parseInt(filter.value)) {
+							console.log(`${user.rankID} !== ${filter.value}`)
 							valid = false;
 						}
 					} else if (filter.filter === 'greaterThan') {
@@ -473,81 +315,6 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 						}
 					} else if (filter.filter === 'lessThan') {
 						if (user.rankID >= parseInt(filter.value)) {
-							valid = false;
-						}
-					}
-				} else if (filter.column === 'hosted') {
-					if (!filter.value) return;
-					if (filter.filter === 'equal') {
-						if (user.hostedSessions.length !== parseInt(filter.value)) {
-							valid = false;
-						}
-					} else if (filter.filter === 'greaterThan') {
-						if (user.hostedSessions.length <= parseInt(filter.value)) {
-							valid = false;
-						}
-					} else if (filter.filter === 'lessThan') {
-						if (user.hostedSessions.length >= parseInt(filter.value)) {
-							valid = false;
-						}
-					}
-				}  else if (filter.column === 'sessions') {
-					if (!filter.value) return;
-					if (filter.filter === 'equal') {
-						if (user.sessions.length !== parseInt(filter.value)) {
-							valid = false;
-						}
-					} else if (filter.filter === 'greaterThan') {
-						if (user.sessions.length <= parseInt(filter.value)) {
-							valid = false;
-						}
-					} else if (filter.filter === 'lessThan') {
-						if (user.sessions.length >= parseInt(filter.value)) {
-							valid = false;
-						}
-					}
-				} else if (filter.column === 'warnings') {
-					if (!filter.value) return;
-					if (filter.filter === 'equal') {
-						if (user.book.filter(x => x.type == "warning").length !== parseInt(filter.value)) {
-							valid = false;
-						}
-					} else if (filter.filter === 'greaterThan') {
-						if (user.book.filter(x => x.type == "warning").length <= parseInt(filter.value)) {
-							valid = false;
-						}
-					} else if (filter.filter === 'lessThan') {
-						if (user.book.filter(x => x.type == "warning").length >= parseInt(filter.value)) {
-							valid = false;
-						}
-					}
-				} else if (filter.column === 'messages') {
-					if (!filter.value) return;
-					if (filter.filter === 'equal') {
-						if (user.messages !== parseInt(filter.value)) {
-							valid = false;
-						}
-					} else if (filter.filter === 'greaterThan') {
-						if (user.messages <= parseInt(filter.value)) {
-							valid = false;
-						}
-					} else if (filter.filter === 'lessThan') {
-						if (user.messages >= parseInt(filter.value)) {
-							valid = false;
-						}
-					}
-				} else if (filter.column === 'notices') {
-					if (!filter.value) return;
-					if (filter.filter === 'equal') {
-						if (user.inactivityNotices.length !== parseInt(filter.value)) {
-							valid = false;
-						}
-					} else if (filter.filter === 'greaterThan') {
-						if (user.inactivityNotices.length <= parseInt(filter.value)) {
-							valid = false;
-						}
-					} else if (filter.filter === 'lessThan') {
-						if (user.inactivityNotices.length >= parseInt(filter.value)) {
 							valid = false;
 						}
 					}
@@ -593,51 +360,6 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 		setMessage("");
 		setType("");
 	}
-
-	const [searchOpen, setSearchOpen] = useState(false)
-	const [searchQuery, setSearchQuery] = useState('')
-	const [searchResults, setSearchResults] = useState([])
-
-	const updateSearchQuery = async (query: any) => {
-		setSearchQuery(query)
-		setSearchOpen(true)
-		if(query == "") {
-			 setSearchOpen(false) 
-			 setColFilters([])
-			 return
-			} else { setSearchOpen(true) }
-		const userRequest = await axios.get(`/api/workspace/${id}/staff/search/${query}`)
-		const userList = userRequest.data.users
-		setSearchResults(userList)
-	}
-
-	const updateSearchFilter = async (username: string) => {
-		setSearchQuery(username)
-		setSearchOpen(false)
-		setColFilters([{ id: uuidv4(), column: 'username', filter: 'equal', value: username }])
-	}
-
-	const getSelectionName = (columnId: string) => {
-		if (columnId == "sessions") { 
-			return "Sessions claimed"
-		} else if (columnId == "hostedSessions") {
-			return 'Hosted sessions'
-		} else if (columnId == "book") {
-			return "Warnings"
-		} else if (columnId == "wallPosts") {
-			return "Wall Posts"
-		} else if (columnId == "rankID") {
-			return "Rank"
-		} else if (columnId == "inactivityNotices") {
-			return "Inactivity notices"
-		} else if (columnId == "minutes") {
-			return "Minutes"
-		} else if (columnId == "idleMinutes") {
-			return "Idle minutes"
-		} else if (columnId == "messages") {
-			return "Messages"
-		}
- 	}
 
 	return <>
 		<Toaster position="bottom-center" />
@@ -697,72 +419,29 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 		</Transition>
 
 		<div className="pagePadding">
-
-			<div className="flex flex-col md:flex-row gap-2">
-				<div className="flex flex-row gap-2">
-				<Popover as="div" className="relative inline-block text-left pb-2">
-						<Popover.Button as={Button} classoverride="ml-0" >
-							Rows
-						</Popover.Button>
-					<Popover.Panel className="absolute left-0 z-20 mt-2 w-80 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-300 focus-visible:outline-none p-3">
-						<div className="flex flex-col gap-1">
-								{table.getAllLeafColumns().map((column: any) => {
-									if (column.id !== "select" && column.id !== "info") {
-										return (
-											<div key={column.id}>
-												<Checkbox {...{
-													type: 'checkbox',
-													checked: column.getIsVisible(),
-													onChange: column.getToggleVisibilityHandler(),
-												}} />{' '}
-												{getSelectionName(column.id)}
-											</div>
-										)
-									}
-								})}
-							</div>
-					</Popover.Panel>
-				</Popover>
-				<Popover as="div" className="relative inline-block text-left pb-2">
-					
+			<Popover as="div" className="relative inline-block w-full text-left pb-2">
+				<div className="w-full flex flex-col lg:flex-row lg:space-x-2 space-y-2 lg:space-y-0">
 					<Popover.Button as={Button} classoverride="ml-0" >
 						Filters
 					</Popover.Button>
-					
-					<Popover.Panel className="absolute left-0 z-20 mt-2 w-80 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-300 focus-visible:outline-none p-3">
-						<Button onClick={newfilter}> Add filter </Button>
-						{colFilters.map((filter) => (
-							<div className="p-3 outline outline-gray-300 rounded-md mt-4 outline-1" key={filter.id}> <Filter ranks={ranks} updateFilter={(col, op, value) => updateFilter(filter.id, col, op, value)} deleteFilter={() => removeFilter(filter.id)} data={filter} /> </div>
-						))}
-					</Popover.Panel>
-				</Popover>
+					{table.getSelectedRowModel().flatRows.length > 0 && (
+						<div className="grid grid-cols-1 gap-2 auto-cols-max md:grid-cols-5">
+							<Button classoverride="bg-green-500 hover:bg-green-500/50 ml-0" onPress={() => { setType("promotion"); setIsOpen(true) }}>Mass promote {table.getSelectedRowModel().flatRows.length} users</Button>
+							<Button classoverride="bg-orange-500 hover:bg-orange-500/50 ml-0" onPress={() => { setType("warning"); setIsOpen(true) }}>Mass warn {table.getSelectedRowModel().flatRows.length} users</Button>
+							<Button classoverride="bg-gray-800 hover:bg-gray-800/50 ml-0" onPress={() => { setType("suspension"); setIsOpen(true) }}>Mass suspend {table.getSelectedRowModel().flatRows.length} users</Button>
+							<Button classoverride="bg-red-500 hover:bg-red-500/50 ml-0" onPress={() => { setType("fire"); setIsOpen(true) }}>Mass fire {table.getSelectedRowModel().flatRows.length} users</Button>
+							<Button classoverride="bg-emerald-500 hover:bg-emerald-500/50 ml-0" onPress={() => { setType("add"); setIsOpen(true) }}>Add minutes to {table.getSelectedRowModel().flatRows.length} users</Button>
+						</div>
+					)}
 				</div>
-			
-				{table.getSelectedRowModel().flatRows.length > 0 && (
-							<div className="flex flex-row flex-wrap gap-2 mb-2">
-								<Button classoverride="bg-green-500 hover:bg-green-500/50 ml-0" onPress={() => { setType("promotion"); setIsOpen(true) }}>Mass promote {table.getSelectedRowModel().flatRows.length} users</Button>
-								<Button classoverride="bg-orange-500 hover:bg-orange-500/50 ml-0" onPress={() => { setType("warning"); setIsOpen(true) }}>Mass warn {table.getSelectedRowModel().flatRows.length} users</Button>
-								<Button classoverride="bg-gray-800 hover:bg-gray-800/50 ml-0" onPress={() => { setType("suspension"); setIsOpen(true) }}>Mass suspend {table.getSelectedRowModel().flatRows.length} users</Button>
-								<Button classoverride="bg-red-500 hover:bg-red-500/50 ml-0" onPress={() => { setType("fire"); setIsOpen(true) }}>Mass fire {table.getSelectedRowModel().flatRows.length} users</Button>
-								<Button classoverride="bg-emerald-500 hover:bg-emerald-500/50 ml-0" onPress={() => { setType("add"); setIsOpen(true) }}>Add minutes to {table.getSelectedRowModel().flatRows.length} users</Button>
-							</div>
-						)}
-				{table.getSelectedRowModel().flatRows.length == 0 && (
-					<div className="relative inline-block w-full pb-2">
-					<input type="text" value={searchQuery} onChange={(e:any) => { updateSearchQuery(e.target.value) }} className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full h-full" placeholder="Search Username" />
-					<div className={`absolute bg-white border border-gray-300 p-3 mt-2 rounded-lg w-full flex flex-col gap-1 ${searchOpen ? "" : "hidden"}`}>
-						{searchResults.length < 1 && <p className="text-gray-400 text-center">No results found</p>} 
-						{searchResults.map((u: any) => {
-							return (<button key={u.username} onClick={() => { updateSearchFilter(u.username) }} className="flex flex-row gap-3 flex-wrap rounded-xl bg-white hover:bg-gray-100 items-center p-2">
-								<img src={u.thumbnail} className="w-10 h-10 rounded-full bg-primary" />
-								<p className="font-semibold">{u.username}</p>
-							</button>)
-						})}
-					</div>
-				</div>
-				)}
-				
-			</div>
+				<Popover.Panel className="absolute left-0 z-20 mt-2 w-80 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-300 focus-visible:outline-none p-3">
+					<Button onClick={newfilter}> Add filter </Button>
+					{colFilters.map((filter) => (
+						<div className="p-3 outline outline-gray-300 rounded-md mt-4 outline-1" key={filter.id}> <Filter ranks={ranks} updateFilter={(col, op, value) => updateFilter(filter.id, col, op, value)} deleteFilter={() => removeFilter(filter.id)} data={filter} /> </div>
+					))}
+
+				</Popover.Panel>
+			</Popover>
 			<div className="max-w-screen overflow-x-auto bg-white w-full rounded-xl border-1 p-3 border border-separate border-gray-300">
 				<table className="min-w-full">
 					<thead className="text-left text-slate-400 text-sm">

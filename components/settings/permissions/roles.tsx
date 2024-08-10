@@ -29,12 +29,9 @@ const Button: FC<Props> = ({ roles, setRoles, grouproles }) => {
 	const permissions = {
 		"Admin (Manage workspace)": "admin",
 		"Manage sessions": "manage_sessions",
-		'View all activity': 'view_entire_groups_activity',
 		"Manage activity & members": "manage_activity",
 		"Post on wall": "post_on_wall",
 		"View members": "view_members",
-		'Manage alliances': 'manage_alliances',
-		'Represent alliance': 'represent_alliance',
 		"Manage docs": "manage_docs",
 	};
 
@@ -44,11 +41,13 @@ const Button: FC<Props> = ({ roles, setRoles, grouproles }) => {
 			{}
 		);
 		if (res.status === 200) {
+			console.log("pushing role");
 			setRoles([...roles, res.data.role]);
 		}
 	};
 
 	const updateRole = async (value: string, id: string) => {
+		console.log("uas");
 		const index = roles.findIndex((role: any) => role.id === id);
 		if (index === null) return;
 		const rroles = Object.assign(([] as typeof roles), roles);
@@ -89,6 +88,7 @@ const Button: FC<Props> = ({ roles, setRoles, grouproles }) => {
 		} else {
 			rroles[index].groupRoles.push(role.id);
 		};
+		console.log(rroles[index].groupRoles);
 		setRoles(rroles)
 		await axios.post(
 			`/api/workspace/${workspace.groupId}/settings/roles/${id}/update`,

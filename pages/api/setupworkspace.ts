@@ -8,7 +8,6 @@ import { withSessionRoute } from '@/lib/withSession'
 import * as bcrypt from 'bcrypt'
 const prisma = new PrismaClient()
 import { setRegistry } from '@/utils/registryManager'
-import { getRobloxUsername, getRobloxThumbnail, getRobloxDisplayName, getRobloxUserId } from "@/utils/roblox";
 
 type Data = {
 	success: boolean
@@ -28,7 +27,7 @@ export async function handler(
 	res: NextApiResponse<Data>
 ) {
 	if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' })
-	let userid = await getRobloxUserId(req.body.username, req.headers.origin).catch(e => null) as number | undefined;
+	let userid = await noblox.getIdFromUsername(req.body.username).catch(e => null)
 	if (!userid) {
 		res.status(404).json({ success: false, error: 'Username not found' })
 		return

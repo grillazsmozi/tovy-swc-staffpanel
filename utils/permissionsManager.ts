@@ -2,8 +2,6 @@ import prisma from "./database";
 import type { NextApiRequest, NextApiResponse, NextApiHandler, GetServerSidePropsContext } from 'next'
 import { withSessionRoute, withSessionSsr } from '@/lib/withSession'
 import * as noblox from 'noblox.js'
-import { getConfig } from "./configEngine";
-import { getThumbnail } from "./userinfoEngine";
 
 type MiddlewareData = {
 	handler: NextApiHandler
@@ -93,26 +91,19 @@ export function withPermissionCheckSsr(
 
 
 export async function checkGroupRoles(groupID: number) {
-	const rss = await noblox.getRoles(groupID).catch(() => null);
-	if (!rss) return;
-	const ranks: noblox.Role[] = [];
+	const ranks = await noblox.getRoles(groupID).catch(() => null);
 
 	const rs = await prisma.role.findMany({
 		where: {
 			workspaceGroupId: groupID
 		}
 	});
-	const config = await getConfig('activity', groupID)
-	const minTrackedRole = config?.role || 0;
-	for (const role of rss) {
-		if (role.rank < minTrackedRole) continue;
-		ranks.push(role);
-	}
-	console.log(ranks)
 	if (ranks && ranks.length) {
 		for (const rank of ranks) {
 			const role = rs.find(r => r.groupRoles?.includes(rank.id));
+			console.log(role)
 			const members = await noblox.getPlayers(groupID, rank.id).catch(e => {
+				console.log(e);
 				return null;
 			});
 			if (!members) continue;
@@ -137,6 +128,7 @@ export async function checkGroupRoles(groupID: number) {
 			for (const user of users) {
 				if (user.ranks?.find(r => r.workspaceGroupId === groupID)?.rankId === BigInt(rank.rank)) continue;
 				if (members.find(member => member.userId === Number(user.userid))) {
+					console.log(`${user.username} is in ${rank.name} (${rank.rank})`)
 					await prisma.rank.upsert({
 						where: {
 							userId_workspaceGroupId: {
@@ -210,8 +202,7 @@ export async function checkGroupRoles(groupID: number) {
 									id: role.id
 								}
 							},
-							username: member.username,
-							picture: await getThumbnail(member.userId)
+							username: member.username
 						},
 						update: {
 							roles: {
@@ -222,106 +213,8 @@ export async function checkGroupRoles(groupID: number) {
 							username: member.username
 						}
 					});
-
-					await prisma.rank.upsert({
-						where: {
-							userId_workspaceGroupId: {
-								userId: BigInt(member.userId),
-								workspaceGroupId: groupID
-							}
-						},
-						update: {
-							rankId: BigInt(rank.rank)
-						},
-						create: {
-							userId: BigInt(member.userId),
-							workspaceGroupId: groupID,
-							rankId: BigInt(rank.rank)
-						}
-					});
-
 				};
 			}
 		}
-	}
-}
-
-export async function checkSpecificUser(userID: number) {
-	const ws = await prisma.workspace.findMany({});
-	for (const w of ws) {
-		const rankId = await noblox.getRankInGroup(w.groupId, userID).catch(() => null);
-		await prisma.rank.upsert({
-			where: {
-				userId_workspaceGroupId: {
-					userId: BigInt(userID),
-					workspaceGroupId: w.groupId
-				}
-			},
-			update: {
-				rankId: BigInt(rankId || 0)
-			},
-			create: {
-				userId: BigInt(userID),
-				workspaceGroupId: w.groupId,
-				rankId: BigInt(rankId || 0)
-			}
-		});
-
-		if (!rankId) continue;
-		const rankInfo = await noblox.getRole(w.groupId, rankId).catch(() => null);
-		if (!rankInfo) continue;
-		const rank = rankInfo.id
-
-		if (!rank) continue;
-		const role = await prisma.role.findFirst({
-			where: {
-				workspaceGroupId: w.groupId,
-				groupRoles: {
-					hasSome: [rank]
-				}
-			}
-		});
-		if (!role) continue;
-		const user = await prisma.user.findFirst({
-			where: {
-				userid: BigInt(userID),
-				
-			},
-			include: {
-				roles: {
-					where: {
-						workspaceGroupId: w.groupId
-					}
-				}
-			}
-		});
-		if (!user) continue;
-		if (user.roles.length) {
-			await prisma.user.update({
-				where: {
-					userid: BigInt(userID)
-				},
-				data: {
-					roles: {
-						disconnect: {
-							id: user.roles[0].id
-						}
-					}
-				}
-			});
-		}
-		await prisma.user.update({
-			where: {
-				userid: BigInt(userID)
-			},
-			data: {
-				roles: {
-					connect: {
-						id: role.id
-					}
-				}
-			}
-		});
-		return true;
 	}
 }

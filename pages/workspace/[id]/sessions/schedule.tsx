@@ -94,6 +94,7 @@ const Home: pageWithLayout<{
 
 	const getLastThreeDays = useMemo(() => {
 		const today = new Date();
+		console.log(today)
 		const lastThreeDays = [];
 		const nextThreeDays = [];
 		for (let i = 0; i < 4; i++) {
@@ -116,6 +117,7 @@ const Home: pageWithLayout<{
 
 	const claimSession = async (schedule: any) => {
 		setDoingAction(true);
+		console.log(selectedDate)
 		const res = await axios.post(`/api/workspace/${router.query.id}/sessions/manage/${schedule.id}/claim`, {
 			date: selectedDate.getTime(),
 			timezoneOffset: new Date().getTimezoneOffset()
@@ -132,6 +134,7 @@ const Home: pageWithLayout<{
 
 	const claimSessionSlot = async (schedule: any, slotId: string, slotNum: number) => {
 		setDoingAction(true);
+		console.log(selectedDate)
 		const res = await axios.post(`/api/workspace/${router.query.id}/sessions/manage/${schedule.id}/claimSlot`, {
 			date: selectedDate.getTime(),
 			slotId,
@@ -151,6 +154,7 @@ const Home: pageWithLayout<{
 
 	const unclaimSessionSlot = async (schedule: any, slotId: string, slotNum: number) => {
 		setDoingAction(true);
+		console.log(selectedDate)
 		const res = await axios.post(`/api/workspace/${router.query.id}/sessions/manage/${schedule.id}/unclaimSlot`, {
 			date: selectedDate.getTime(),
 			slotId,
@@ -170,6 +174,7 @@ const Home: pageWithLayout<{
 
 	const unclaimSession = async (schedule: any) => {
 		setDoingAction(true);
+		console.log(selectedDate)
 		const res = await axios.post(`/api/workspace/${router.query.id}/sessions/manage/${schedule.id}/unclaim`, {
 			date: selectedDate.getTime(),
 			timezoneOffset: new Date().getTimezoneOffset()
@@ -213,6 +218,7 @@ const Home: pageWithLayout<{
 		};
 
 		if (!s?.date) return { disabled: false, text: "Claims the session so people know you\'re the host" };
+		console.log(s.date)
 		if (s.date < new Date()) {
 			return {
 				disabled: true,
@@ -247,6 +253,7 @@ const Home: pageWithLayout<{
 					for (const s of session.sessions) {
 						const d8 = new Date(s.date);
 						const d2 = selectedDate.getUTCDate();
+						console.log(`${s.id} is on ${d8.getUTCDate()} (${d8.getDate()}) and selected is ${d2}`)
 					}
 
 					return (
@@ -254,7 +261,7 @@ const Home: pageWithLayout<{
 							<div className={`to-primary from-primary/75 bg-gradient-to-t w-full rounded-md overflow-clip text-white`}>
 								<div className="px-5 py-4 backdrop-blur flex z-10">
 									<div><p className="text-xl font-semibold"> {session.sessionType.name} </p>
-										{session.sessions.find(e => new Date(e.date).getUTCDate() === selectedDate.getUTCDate())?.ownerId ?
+										{session.sessions.find(e => new Date(e.date).getUTCDate() === selectedDate.getUTCDate()) ?
 											<div className="flex mt-1">
 												<img src={(session.sessions.find(e => new Date(e.date).getUTCDate() === selectedDate.getUTCDate())?.owner.picture as string)} className="bg-primary rounded-full w-8 h-8 my-auto" />
 												<p className="font-medium pl-2 leading-5 my-auto"> Hosted by {session.sessions.find(e => new Date(e.date).getUTCDate() === selectedDate.getUTCDate())?.owner.username} <br /> <span className=""> {`${moment(date).format(`hh:mm A`)}`} </span> </p>
@@ -314,6 +321,7 @@ const Home: pageWithLayout<{
 												<div className="gap-y-4 flex flex-col max-h-96 overflow-auto py-2 px-1 rounded-xl">
 													{selectedSession?.sessionType.slots.map((s, index) => {
 														if (typeof s !== 'object') return;
+														console.log(s)
 														const slot = JSON.parse(JSON.stringify(s))
 														return (
 															<div className="flex flex-col outline outline-gray-300 p-3 rounded-xl outline-1 gap-y-3" key={index}>
@@ -328,13 +336,13 @@ const Home: pageWithLayout<{
 																				<Menu as="div" className="relative inline-block ml-auto">
 																					<div className="w-full">
 																						<Menu.Button className="ml-auto disabled:bg-gray-200 disabled:cursor-default my-auto hover:bg-gray-300 text-gray-500 transition rounded-md px-2 py-1 flex" tabIndex={0} role="button">
-																							<img className="w-6 bg-primary rounded-full mr-1 h-6" src={String(session?.users.find(e => (e.roleID === slot.id && e.slot === i))?.user.picture)} />
+																							<img className="w-6 bg-primary rounded-full mr-1 h-6" src={`https://www.roblox.com/headshot-thumbnail/image?userId=${session?.users.find(e => (e.roleID === slot.id && e.slot === i))?.userid}&width=512&height=512&format=png`} />
 																							{session?.users?.find(e => (e.roleID === slot.id && e.slot === i))?.user?.username}
 																						</Menu.Button>
 																					</div>
 																					<Menu.Items className="absolute left-0 z-20 mt-2 w-34 origin-top-right rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-400 focus-visible:outline-none">
 																						<div className="py-2 px-2">
-																							{session?.users?.find(e => (e.roleID === slot.id && e.slot === i))?.user.userid !== BigInt(login.userId) && <Menu.Item>
+																							{session?.users?.find(e => (e.roleID === slot.id && e.slot === i))?.user.userid === BigInt(login.userId) && <Menu.Item>
 																								{({ active }) => (
 																									<button
 																									className="ml-auto w-full disabled:bg-gray-200 disabled:cursor-default cursor-pointer my-auto hover:bg-gray-300 text-gray-500 transition rounded-md px-2 py-1 flex" 
@@ -344,7 +352,7 @@ const Home: pageWithLayout<{
 																									</button>
 																								)}
 																							</Menu.Item>}
-																							{session?.users?.find(e => (e.roleID === slot.id && e.slot === i))?.user.userid === BigInt(login.userId) && <Menu.Item>
+																							{session?.users?.find(e => (e.roleID === slot.id && e.slot === i))?.user.userid !== BigInt(login.userId) && <Menu.Item>
 																								{({ active }) => (
 																									<button
 																									className="ml-auto w-full disabled:bg-gray-200 disabled:cursor-default cursor-pointer my-auto hover:bg-gray-300 text-gray-500 transition rounded-md px-2 py-1 flex"

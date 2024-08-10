@@ -3,10 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import prisma from '@/utils/database';
 import { withSessionRoute } from '@/lib/withSession'
 import { red } from 'tailwindcss/colors';
-import { getThumbnail } from '@/utils/userinfoEngine';
 import * as noblox from 'noblox.js'
-import { checkSpecificUser } from '@/utils/permissionsManager';
-import { getRobloxUsername, getRobloxThumbnail, getRobloxDisplayName, getRobloxUserId } from "@/utils/roblox";
 type Data = {
 	success: boolean
 	error?: string
@@ -28,18 +25,12 @@ export async function handler(
 			}
 		}
 	})
-	console.log(config)
-
 	if (!config) return res.status(401).json({ success: false, error: "Unauthorized" })
 	if (!req.body.userid) return res.status(400).json({ success: false, error: "Missing user ID from request body" })
 	if (typeof req.body.userid !== "number") return res.status(400).json({ success: false, error: "User ID not a number" });
-	console.log(`${req.body.userid} is creating a session`)
 	const value = JSON.parse(JSON.stringify(config.value));
-	const userank = await noblox.getRankInGroup(config.workspaceGroupId, req.body.userid);
-	await checkSpecificUser(req.body.userid)
 	if (value.role) {
-		//check if the user is above value.role
-		
+		const userank = await noblox.getRankInGroup(config.workspaceGroupId, req.session.userid);
 		if (userank <= value.role) {
 			res.status(200).json({ success: true, error: "Did not create session as user is not the right rank" });
 			console.log(`${req.body.userid} is not the right rank to create a session`)
@@ -52,13 +43,11 @@ export async function handler(
 			userid: BigInt(req.body.userid)
 		},
 		update: {
-			username: await getRobloxUsername(req.body.userid),
-			picture: await getThumbnail(req.body.userid)
+			username: await noblox.getUsernameFromId(req.body.userid)
 		},
 		create: {
 			userid: BigInt(req.body.userid),
-			username: await getRobloxUsername(req.body.userid),
-			picture: await getThumbnail(req.body.userid)
+			username: await noblox.getUsernameFromId(req.body.userid)
 		}
 	})
 
@@ -78,7 +67,6 @@ export async function handler(
 					userId: req.body.userid,
 					active: true,
 					startTime: new Date(),
-					universeId: req.body.placeid ? BigInt(req.body.placeid) : null,
 					workspaceGroupId: config.workspaceGroupId
 				}
 			});
@@ -96,9 +84,9 @@ export async function handler(
 				workspaceGroupId: config.workspaceGroupId
 			}
 		})
+		console.log(session.length)
 
 		if(session.length < 1) return res.status(400).json({ success: false, error: "Session not found" })
-		console.log(req.body.idleTime)
 
 		try {
 			await prisma.activitySession.update({
@@ -107,9 +95,7 @@ export async function handler(
 				},
 				data: {
 					endTime: new Date(),
-					active: false,
-					idleTime: req.body.idleTime  ? Number(req.body.idleTime) : 0,
-					messages: req.body.messages ? Number(req.body.messages) : 0,
+					active: false
 				}
 			})
 		

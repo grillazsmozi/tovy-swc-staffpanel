@@ -11,7 +11,9 @@ const Slider: FC<Props> = ({ children, activeSlide }: Props) => {
 	const [sliderHeight, setSliderHeight] = useState('');
 
 	useEffect(() => {
+		console.log(elementsRef.current[activeSlide]);
 		const nextHeights = `height-[${elementsRef.current[activeSlide].clientHeight}px]`;
+		console.log(nextHeights);
 		setSliderHeight(nextHeights);
 	  }, [elementsRef.current, activeSlide]);	
 

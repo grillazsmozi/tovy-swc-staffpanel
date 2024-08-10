@@ -36,16 +36,19 @@ const workspace: LayoutProps = ({ children }) => {
 			"bg-black": colors.black,
 			"bg-gray-500": colors.gray[500],
 		}
-		const hex = hexRgb(themes[groupTheme || "bg-[#2196f3]"] || "#2196f3")
+		const hex = hexRgb(themes[groupTheme])
 		const theme = `${hex.red} ${hex.green} ${hex.blue}`
 		return theme
 	}
 
 	useEffect(() => {
+		console.log('running')
 		router.events.on('routeChangeStart', () => {
+			console.log('starting')
 			setLoading(true)
 		});
 		router.events.on('routeChangeComplete', () => {
+			console.log('complete')
 			setLoading(false)
 		});
 	}, [])
@@ -87,6 +90,7 @@ const workspace: LayoutProps = ({ children }) => {
 	}, [workspace.groupTheme]);
 
 	useEffect(() => {
+		console.log(window.innerWidth)
 		if (window.innerWidth < 768) {
 			setIsMobile(true)
 		} else {

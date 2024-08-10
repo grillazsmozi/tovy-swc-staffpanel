@@ -6,7 +6,6 @@ import { withSessionRoute } from '@/lib/withSession'
 import { getUsername, getThumbnail, getDisplayName } from '@/utils/userinfoEngine'
 import bcrypt from 'bcrypt'
 import * as noblox from 'noblox.js'
-import { getRobloxThumbnail } from '@/utils/roblox';
 type Data = {
 	success: boolean
 	error?: string
@@ -20,6 +19,7 @@ export async function handler(
 ) {
 	if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' })
 	const verification = req.session.verification;
+	console.log(req.session)
 	if (!verification) return res.status(400).json({ success: false, error: 'Missing verification' })
 	const { userid, verificationCode } = verification;
 	const user = await noblox.getPlayerInfo(userid);
@@ -29,9 +29,6 @@ export async function handler(
 	await req.session.destroy();
 	req.session.userid = userid;
 	await req.session.save();
-
-	let thumbnail = await getRobloxThumbnail(userid);
-	if(!thumbnail) thumbnail = null;
 
 	await prisma.user.upsert({
 		where: {
@@ -51,7 +48,6 @@ export async function handler(
 		},
 		create: {
 			userid: BigInt(userid),
-			picture: thumbnail,
 			info: {
 				create: {
 					passwordhash: await bcrypt.hash(password, 10)

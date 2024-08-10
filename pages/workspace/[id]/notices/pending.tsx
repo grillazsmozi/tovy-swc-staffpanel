@@ -41,6 +41,7 @@ export const getServerSideProps = withPermissionCheckSsr(
 
 		});
 
+		console.log(notices)
 
 		return {
 			props: {

@@ -17,10 +17,9 @@ type TopStaff = {
 	userId: number;
 	username: string;
 	ms: number;
-	picture: string
 }
 
-export default withPermissionCheck(handler, 'view_entire_groups_activity');
+export default withPermissionCheck(handler);
 
 export async function handler(
 	req: NextApiRequest,
@@ -62,42 +61,28 @@ export async function handler(
 		}
 	})
 
-	const users = await prisma.user.findMany({
-		where: {},
-		select: {
-			userid: true,
-			username: true,
-			picture: true
-		}
-	})
-
-
 	var activeUsers: {
-		userId: number, username: string, picture: string
+		userId: number, username: string
 	}[] = [];
 	var inactiveUsers: {
-		userId: number, username: string, reason: string, from: Date, to: Date, picture: string
+		userId: number, username: string, reason: string, from: Date, to: Date
 	}[] = [];
 	
+	console.log(activeSession)
+	console.log(inactiveSession)
 	for (const user of activeSession) {
-		const u = users.find(u => u.userid === user.userId);
 		activeUsers.push({
 			userId: Number(user.userId),
-			username: u?.username || "Unknown",
-			picture: u?.picture || ""
+			username: await getUsername(user.userId)
 		})
-		
-
 	}
 	for (const session of inactiveSession) {
-		const u = users.find(u => u.userid === session.userId);
 		inactiveUsers.push({
 			userId: Number(session.userId),
 			reason: session.reason,
 			from: session.startTime,
 			to: session.endTime!,
-			username: u?.username || "Unknown",
-			picture: u?.picture || ""
+			username: await getUsername(session.userId),
 		})
 	}
 
@@ -115,26 +100,21 @@ export async function handler(
 		if (!session.endTime) return;
 		const found = combinedMinutes.find(x => x.userId == Number(session.userId));
 		if (found){
-			found.ms.push((session.endTime.getTime() - session.startTime.getTime()) - (session.idleTime ? Number(session.idleTime) * 60000 : 0))
+			found.ms.push(session.endTime.getTime() - session.startTime.getTime())
 		} else {
-			combinedMinutes.push({ userId: Number(session.userId), ms: [session.endTime.getTime() - session.startTime.getTime() - (session.idleTime ? Number(session.idleTime) * 60000 : 0)] });
+			combinedMinutes.push({ userId: Number(session.userId), ms: [session.endTime.getTime() - session.startTime.getTime()] });
 		}
 	});
 
 	const topStaff: TopStaff[] = [];
 	for (const min of combinedMinutes) {
 		const minSum = min.ms.reduce((partial, a) => partial + a, 0);
-		const found = users.find(x => x.userid === BigInt(min.userId));
 		topStaff.push({
 			userId: min.userId,
-			username: found?.username || "Unknown",
-			ms: minSum,
-			picture: found?.picture || "Unknown"
+			username: await getUsername(min.userId),
+			ms: minSum
 		});
-
 	}
 
-	 const bestStaff = topStaff.sort((a, b) => b.ms - a.ms)
-
-	return res.status(200).json({ success: true, message: { activeUsers, inactiveUsers, topStaff: bestStaff } });
+	return res.status(200).json({ success: true, message: { activeUsers, inactiveUsers, topStaff } });
 }
