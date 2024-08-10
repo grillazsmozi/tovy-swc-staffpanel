@@ -19,7 +19,7 @@ export const getServerSideProps = withPermissionCheckSsr(async ({ query }) => {
 	const sessions = await prisma.session.findMany({
 		where: {
 			startedAt: {
-				lte: new Date()
+				not: null
 			},
 			ended: null,
 			sessionType: {

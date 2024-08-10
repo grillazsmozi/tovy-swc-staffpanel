@@ -18,7 +18,7 @@ export const getServerSideProps = withPermissionCheckSsr(
 	async ({ query, req }) => {
 		const userTakingAction = await prisma.user.findFirst({
 			where: {
-				userid: BigInt(query.uid as string)
+				userid: BigInt(req.session.userid)
 			},
 			include: {
 				roles: {
@@ -171,8 +171,7 @@ export const getServerSideProps = withPermissionCheckSsr(
 				}
 			}
 		});
-
-
+		
 
 		return {
 			props: {

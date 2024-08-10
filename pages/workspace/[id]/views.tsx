@@ -102,7 +102,7 @@ export const getServerSideProps = withPermissionCheckSsr(async ({ params }: GetS
 
 		const ims: number[] = [];
 		allActivity.filter((x: any) => BigInt(x.userId) == user.userid).forEach((s: any) => {
-			ims.push(Number(s.idleTime))
+			ims.push(s.idleTime)
 		})
 
 		const sh: any[] = []
@@ -117,7 +117,7 @@ export const getServerSideProps = withPermissionCheckSsr(async ({ params }: GetS
 
 		computedUsers.push({
 			info: {
-				userId: Number(user.userid),
+				userId: user.userid,
 				username: user.username,
 			},
 			book: user.book,
@@ -661,12 +661,13 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 
 		<div className="pagePadding">
 
-			<div className="flex flex-col md:flex-row gap-2">
-				<div className="flex flex-row gap-2">
-				<Popover as="div" className="relative inline-block text-left pb-2">
-						<Popover.Button as={Button} classoverride="ml-0" >
+			<div className="flex flex-row gap-2">
+			<Popover as="div" className="relative inline-block text-left pb-2">
+					<div className="w-full flex flex-col lg:flex-row lg:space-x-2 space-y-2 lg:space-y-0">
+						<Popover.Button as={Button} classoverride="ml-0 min-w-fit" >
 							Rows
 						</Popover.Button>
+					</div>
 					<Popover.Panel className="absolute left-0 z-20 mt-2 w-80 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-300 focus-visible:outline-none p-3">
 						<div className="flex flex-col gap-1">
 								{table.getAllLeafColumns().map((column: any) => {
@@ -687,22 +688,12 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 					</Popover.Panel>
 				</Popover>
 				<Popover as="div" className="relative inline-block text-left pb-2">
-					
-					<Popover.Button as={Button} classoverride="ml-0" >
-						Filters
-					</Popover.Button>
-					
-					<Popover.Panel className="absolute left-0 z-20 mt-2 w-80 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-300 focus-visible:outline-none p-3">
-						<Button onClick={newfilter}> Add filter </Button>
-						{colFilters.map((filter) => (
-							<div className="p-3 outline outline-gray-300 rounded-md mt-4 outline-1" key={filter.id}> <Filter ranks={ranks} updateFilter={(col, op, value) => updateFilter(filter.id, col, op, value)} deleteFilter={() => removeFilter(filter.id)} data={filter} /> </div>
-						))}
-					</Popover.Panel>
-				</Popover>
-				</div>
-			
-				{table.getSelectedRowModel().flatRows.length > 0 && (
-							<div className="flex flex-row flex-wrap gap-2 mb-2">
+					<div className="w-full flex flex-col lg:flex-row lg:space-x-2 space-y-2 lg:space-y-0">
+						<Popover.Button as={Button} classoverride="ml-0" >
+							Filters
+						</Popover.Button>
+						{table.getSelectedRowModel().flatRows.length > 0 && (
+							<div className="grid grid-cols-1 gap-2 auto-cols-max md:grid-cols-5">
 								<Button classoverride="bg-green-500 hover:bg-green-500/50 ml-0" onPress={() => { setType("promotion"); setIsOpen(true) }}>Mass promote {table.getSelectedRowModel().flatRows.length} users</Button>
 								<Button classoverride="bg-orange-500 hover:bg-orange-500/50 ml-0" onPress={() => { setType("warning"); setIsOpen(true) }}>Mass warn {table.getSelectedRowModel().flatRows.length} users</Button>
 								<Button classoverride="bg-gray-800 hover:bg-gray-800/50 ml-0" onPress={() => { setType("suspension"); setIsOpen(true) }}>Mass suspend {table.getSelectedRowModel().flatRows.length} users</Button>
@@ -710,6 +701,14 @@ const Views: pageWithLayout<pageProps> = ({ usersInGroup, ranks }) => {
 								<Button classoverride="bg-emerald-500 hover:bg-emerald-500/50 ml-0" onPress={() => { setType("add"); setIsOpen(true) }}>Add minutes to {table.getSelectedRowModel().flatRows.length} users</Button>
 							</div>
 						)}
+					</div>
+					<Popover.Panel className="absolute left-0 z-20 mt-2 w-80 origin-top-left rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-300 focus-visible:outline-none p-3">
+						<Button onClick={newfilter}> Add filter </Button>
+						{colFilters.map((filter) => (
+							<div className="p-3 outline outline-gray-300 rounded-md mt-4 outline-1" key={filter.id}> <Filter ranks={ranks} updateFilter={(col, op, value) => updateFilter(filter.id, col, op, value)} deleteFilter={() => removeFilter(filter.id)} data={filter} /> </div>
+						))}
+					</Popover.Panel>
+				</Popover>
 				{table.getSelectedRowModel().flatRows.length == 0 && (
 					<div className="relative inline-block w-full pb-2">
 					<input type="text" value={searchQuery} onChange={(e:any) => { updateSearchQuery(e.target.value) }} className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full h-full" placeholder="Search Username" />
