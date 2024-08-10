@@ -9,6 +9,18 @@ import * as bcrypt from 'bcrypt'
 const prisma = new PrismaClient()
 import { setRegistry } from '@/utils/registryManager'
 
+function getUserID(name: any)
+{
+    fetch(`https://www.roblox.com/users/profile?username=${name}`)
+        .then(r => {
+            if (!r.ok) { throw "Invalid response"; }
+            return r.url.match(/\d+/)[0];
+        })
+        .then(id => {
+            console.log(id);
+        })
+}
+
 type Data = {
 	success: boolean
 	error?: string
@@ -27,7 +39,7 @@ export async function handler(
 	res: NextApiResponse<Data>
 ) {
 	if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' })
-	let userid = await noblox.getIdFromUsername(req.body.username).catch(e => null)
+	let userid = await getUserID(req.body.username)
 	if (!userid) {
 		res.status(404).json({ success: false, error: 'Username not found' })
 		return
