@@ -51,7 +51,7 @@ export async function handler(
 ) {
 	if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' })
 
-	let userid = await Number(getUserID(req.body.username))
+	let userid = await getUserID(req.body.username)
 
 	console.log(userid)
 
