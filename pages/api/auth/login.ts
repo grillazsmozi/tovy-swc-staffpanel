@@ -56,7 +56,10 @@ export async function handler(
 	res: NextApiResponse<response>
 ) {
 	if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' })
-	const id = await getUserID(req.body.username)
+
+	const idold = await getUserID(req.body.username)
+	let id = parseInt(idold, 10);
+
 	if (!id) return res.status(404).json({ success: false, error: 'Please enter a valid username' })
 	const user = await prisma.user.findUnique({
 		where: {
