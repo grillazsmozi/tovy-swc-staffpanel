@@ -9,6 +9,30 @@ import prisma from '@/utils/database';
 
 export default withSessionRoute(handler);
 
+function getUserID(name: string): Promise<string> {
+    return new Promise((res, rej) => {
+        fetch(`https://www.roblox.com/users/profile?username=${name}`)
+            .then(r => {
+                // check to see if URL is invalid.
+                if (!r.ok) { throw "Invalid response"; }
+                // return the only digits in the URL "the User ID"
+                const match = r.url.match(/\d+/);
+                if (match) {
+                    return match[0];
+                } else {
+                    throw "No user ID found in URL";
+                }
+            })
+            .then(id =>{
+                // this is where you get your ID
+                console.log(id);
+                res(id);
+            })
+            .catch(error => rej(error));
+    });
+}
+
+
 type User = {
 	userId: number
 	username: string
@@ -32,7 +56,7 @@ export async function handler(
 	res: NextApiResponse<response>
 ) {
 	if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' })
-	const id = await noblox.getIdFromUsername(req.body.username).catch(e => null)
+	const id = await getUserID(req.body.username)
 	if (!id) return res.status(404).json({ success: false, error: 'Please enter a valid username' })
 	const user = await prisma.user.findUnique({
 		where: {
