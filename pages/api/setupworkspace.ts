@@ -50,7 +50,11 @@ export async function handler(
 	res: NextApiResponse<Data>
 ) {
 	if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' })
+
 	let userid = await Number(getUserID(req.body.username))
+
+	console.log(userid)
+
 	if (!userid) {
 		res.status(404).json({ success: false, error: 'Username not found' })
 		return
