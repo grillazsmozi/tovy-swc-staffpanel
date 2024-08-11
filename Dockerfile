@@ -5,7 +5,7 @@ WORKDIR /usr/src/app
 
 COPY . /usr/src/app
 
-RUN npm ci
+RUN NODE_ENV=development npm ci
 RUN npm run prisma:generate
 RUN npm run build
 
