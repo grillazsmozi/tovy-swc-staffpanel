@@ -32,6 +32,16 @@ function getUserID(name: string): Promise<string> {
     });
 }
 
+function compare(A: any,B: any): Promise<any> {
+	return new Promise((res, rej) => {
+		if (A == B) {
+			return true
+		} else {
+			return false
+		}
+	}
+}
+
 
 type User = {
 	userId: number
@@ -71,7 +81,7 @@ export async function handler(
 		}
 	})
 	if (!user?.info?.passwordhash) return res.status(401).json({ success: false, error: 'Invalid username or password' })
-	const valid = await bcrypt.compare(req.body.password, user.info?.passwordhash)
+	const valid = await compare(req.body.password,user.info?.passwordhash)//bcrypt.compare(req.body.password, user.info?.passwordhash)
 	if (!valid) return res.status(401).json({ success: false, error: 'Invalid username or password' })
 	req.session.userid = id
 	await req.session?.save()
