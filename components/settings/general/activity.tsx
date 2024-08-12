@@ -9,6 +9,7 @@ import { IconCheck } from "@tabler/icons";
 import { IconChevronDown } from "@tabler/icons";
 import Button from "@/components/button";
 import { useRouter } from "next/router";
+import { useEffect } from 'react';
 
 
 import { FC } from '@/types/settingsComponent'
